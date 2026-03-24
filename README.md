@@ -19,6 +19,44 @@ This is a local-first coach for:
 - decision memos
 - stakeholder communication
 
+## Quick Start
+
+Clone:
+
+```bash
+git clone https://github.com/pcortes/ai-pm-risk-coach.git
+cd ai-pm-risk-coach
+```
+
+Install:
+
+```bash
+npm install
+```
+
+Run the desktop app:
+
+```bash
+npm run electron:dev
+```
+
+Run the web app only:
+
+```bash
+npm run dev
+```
+
+## Requirements
+
+- macOS
+- Node.js 20+
+- `Claude Code` installed locally if you want the richer Claude-generated coaching layer
+
+Important:
+- the app does not require an Anthropic API key in the repo
+- the richer coach path uses the local `Claude Code` CLI login if it exists
+- if `Claude Code` is not logged in, the app still works, but the deeper coaching layer stays in fallback mode
+
 ## Product Thesis
 
 Most AI tools give one-off answers with zero memory of the user.
@@ -169,6 +207,23 @@ Main modules:
 
 For a fuller explanation, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
+## First-Run Expectations
+
+On first launch, the app should open quickly.
+
+What happens next:
+- the base coach snapshot returns immediately
+- Claude Code session monitoring appears right away if sessions are active
+- prompt coach works immediately
+- memory profile appears immediately from local logs if they exist
+- richer Claude-generated coaching may appear on a later refresh if cache is empty and local `Claude Code` is available
+
+If the richer coach layer is unavailable:
+- the app should still load
+- the dashboard should still work
+- fallback coaching should still appear
+- the main missing piece will be the deeper session-specific and daily LLM coaching
+
 ## Install
 
 ```bash
@@ -255,12 +310,15 @@ That means:
 
 If an LLM is dropped into this repo, the shortest path to understanding is:
 
-1. read [`src/app/page.tsx`](src/app/page.tsx)
-2. read [`src/app/api/coach/route.ts`](src/app/api/coach/route.ts)
-3. read [`src/lib/coach/engine.ts`](src/lib/coach/engine.ts)
-4. read [`src/lib/coach/profile.ts`](src/lib/coach/profile.ts)
-5. read [`src/lib/coach/scoring.ts`](src/lib/coach/scoring.ts)
-6. read [`src/lib/coach/storage.ts`](src/lib/coach/storage.ts)
+1. read [`docs/AI_NATIVE_PM_COACH_PRD.md`](docs/AI_NATIVE_PM_COACH_PRD.md)
+2. read [`src/app/page.tsx`](src/app/page.tsx)
+3. read [`src/app/api/coach/route.ts`](src/app/api/coach/route.ts)
+4. read [`src/lib/coach/engine.ts`](src/lib/coach/engine.ts)
+5. read [`src/lib/coach/llm-coach.ts`](src/lib/coach/llm-coach.ts)
+6. read [`src/lib/monitor/claude-sessions.ts`](src/lib/monitor/claude-sessions.ts)
+7. read [`src/lib/coach/profile.ts`](src/lib/coach/profile.ts)
+8. read [`src/lib/coach/scoring.ts`](src/lib/coach/scoring.ts)
+9. read [`src/lib/coach/storage.ts`](src/lib/coach/storage.ts)
 
 Important design principles:
 - keep it local-first
@@ -268,6 +326,15 @@ Important design principles:
 - keep heuristics as substrate and fallback, not the main visible coach
 - prefer personal coaching over generic productivity fluff
 - optimize for AI PM risk decision quality, not just “more AI usage”
+
+## Sharing This Repo
+
+If you are sending this repo to a new user:
+- point them at this README first
+- tell them to run `npm install`
+- tell them to run `npm run electron:dev`
+- tell them the app is useful immediately, even before richer Claude coaching warms
+- tell them richer coaching depends on a local `Claude Code` login, not on any API key in the repo
 
 ## Good Next Steps
 

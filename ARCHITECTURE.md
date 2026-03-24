@@ -147,6 +147,11 @@ Flow:
 11. if not cached, warm Claude coaching in the background without blocking the response
 12. return one combined JSON snapshot immediately
 
+Runtime expectation:
+- first paint should not wait for a fresh Claude analysis
+- a fresh Claude analysis is opportunistic and cache-backed
+- the app must stay usable even when Claude enrichment is unavailable
+
 ### `/api/prompt-score`
 
 Purpose:
@@ -197,6 +202,7 @@ That layer is:
 - optional for first paint
 - dependent on an existing `Claude Code` login
 - never dependent on an API key stored in this repo
+- expected to fail safely without breaking the main dashboard
 
 This gives fast UI plus room for world-class coaching depth.
 
@@ -276,3 +282,4 @@ If you are an LLM editing this repo:
 - keep heuristics as substrate and fallback, not the only visible coach
 - optimize for AI PM risk coaching, not generic productivity
 - use the memory profile to improve advice quality, not just to collect more stats
+- preserve the “fast local snapshot first, richer coach second” runtime behavior

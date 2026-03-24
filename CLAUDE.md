@@ -48,6 +48,21 @@ How do we help one user become dramatically better at using AI for:
 7. `src/lib/coach/scoring.ts`
 8. `src/lib/coach/storage.ts`
 
+## New LLM Onboarding
+
+If you are a new coding agent in this repo:
+
+1. read `README.md`
+2. read `docs/AI_NATIVE_PM_COACH_PRD.md`
+3. read `ARCHITECTURE.md`
+4. then inspect the files listed above
+
+You should quickly understand:
+- this is a personal AI coach, not a company dashboard
+- the Claude monitor comes from the original working `claude-control` substrate
+- the app should load fast even if richer Claude coaching is unavailable
+- there is no API-key path in this repo; richer coaching depends on local `Claude Code` login
+
 ## Design Rules
 
 - prioritize coaching quality over feature count
