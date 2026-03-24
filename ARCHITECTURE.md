@@ -11,6 +11,7 @@ It is a personal AI coaching system for one user.
 The system continuously combines:
 - current local context
 - passive activity samples
+- automatic AI session detection
 - today’s logged AI interactions
 - cumulative historical usage
 
@@ -72,6 +73,9 @@ Each line is a JSON object with:
 - context app name
 - context window title
 - context work mode
+- source
+- prompt capture mode
+- session start/end timestamps
 
 ### `activity.jsonl`
 
@@ -117,13 +121,14 @@ Purpose:
 Flow:
 1. detect active app and frontmost window title
 2. record a passive activity sample if the context changed or enough time passed
-3. read usage log and activity log
-4. filter today’s entries
-5. compute today’s amount/quality/leverage
-6. build cumulative memory profile from all entries plus passive activity
-7. persist `profile.json`
-8. generate benchmark deltas and suggestion queue
-9. return one combined JSON snapshot
+3. auto-detect supported AI tool sessions from the active window and finalize usage entries when sessions end
+4. read usage log and activity log
+5. filter today’s entries
+6. compute today’s amount/quality/leverage
+7. build cumulative memory profile from all entries plus passive activity
+8. persist `profile.json`
+9. generate benchmark deltas and suggestion queue
+10. return one combined JSON snapshot
 
 ### `/api/prompt-score`
 
@@ -150,6 +155,9 @@ Flow:
 2. capture active context if not already provided
 3. append JSONL line
 4. return the stored entry
+
+This route is now optional.
+It exists for prompt-level coaching or extra manual context, not baseline time tracking.
 
 ## Prompt Scoring Philosophy
 

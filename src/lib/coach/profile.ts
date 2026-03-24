@@ -14,13 +14,14 @@ import { localDateKey } from "./time";
 
 export function buildMemoryProfile(entries: CoachUsageEntry[], activitySamples: ActivitySample[]): MemoryProfile {
   const usageBuckets = bucketByDay(entries.map((entry) => ({ timestamp: entry.timestamp, value: entry })));
+  const promptEntries = entries.filter((entry) => entry.source !== "auto");
   const daysTracked = countTrackedDays(entries, activitySamples);
   const totalInteractions = entries.length;
   const avgDailyInteractions = daysTracked === 0 ? 0 : round1(totalInteractions / daysTracked);
   const avgDailyMinutes =
     daysTracked === 0 ? 0 : round1(entries.reduce((sum, entry) => sum + Math.max(0, entry.minutes), 0) / daysTracked);
 
-  const assessments = entries.map(assessPrompt);
+  const assessments = promptEntries.map(assessPrompt);
   const topTools = counter(entries.map((entry) => entry.tool));
   const topCategories = counter(entries.flatMap((entry) => detectCategories(entry)));
   const recurringTopics = extractFocusTerms(entries, 8);
@@ -46,7 +47,7 @@ export function buildMemoryProfile(entries: CoachUsageEntry[], activitySamples: 
   const usageContextModes = distributionCounter(entries.map(inferUsageMode).filter(Boolean) as string[]);
   const opportunityGaps = buildOpportunityGaps(topObservedWorkModes, usageContextModes);
 
-  const categoryScores = averageScoresByCategory(entries, assessments);
+  const categoryScores = averageScoresByCategory(promptEntries, assessments);
   const strongestCategory = categoryScores[0];
   const weakestCategory = categoryScores[categoryScores.length - 1];
   const bestUsageWindow = detectBestUsageWindow(entries, activitySamples);

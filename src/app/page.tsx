@@ -103,9 +103,9 @@ export default function Page() {
               delta={data.benchmark.amountDelta}
             />
             <MetricCard
-              title="Quality"
+              title="Prompt Quality"
               value={`${data.today.scoreCard.quality}`}
-              caption={`Top modes ${formatCounts(data.today.topCategories) || "none yet"}`}
+              caption={`Prompt-scored interactions ${data.today.qualitySignals}`}
               delta={data.benchmark.qualityDelta}
             />
             <MetricCard
@@ -115,9 +115,9 @@ export default function Page() {
               delta={data.benchmark.leverageDelta}
             />
             <MetricCard
-              title="Memory Profile"
-              value={data.memoryProfile.archetype}
-              caption={`${data.memoryProfile.daysTracked} tracked day(s) · ${data.memoryProfile.totalInteractions} logged interactions`}
+              title="Auto Capture"
+              value={data.autoCapture.detectedTool ?? "On"}
+              caption={data.autoCapture.note}
             />
           </section>
 
@@ -126,6 +126,10 @@ export default function Page() {
               <div className="grid gap-4 md:grid-cols-2">
                 <InfoBlock label="Frontmost app" value={data.activeContext.appName ?? "Unknown"} />
                 <InfoBlock label="Detected work mode" value={data.activeContext.workMode} />
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <InfoBlock label="Auto capture" value={data.autoCapture.detectedTool ? `Tracking ${data.autoCapture.detectedTool}` : "Standing by"} />
+                <InfoBlock label="Capture mode" value={data.autoCapture.promptCaptureMode ?? "context only"} />
               </div>
               <InfoBlock label="Window title" value={data.activeContext.windowTitle ?? "Unavailable"} />
               <div className="rounded-2xl border border-sky-400/20 bg-sky-400/8 p-4 text-sm leading-6 text-sky-100">
@@ -205,7 +209,7 @@ export default function Page() {
               </div>
             </Panel>
 
-            <Panel title="Quick Log" subtitle="Store what you actually did so the memory profile gets better over time">
+            <Panel title="Optional Save" subtitle="Auto-capture tracks time automatically. Use this only when you want prompt-level scoring or extra context.">
               <div className="space-y-3">
                 <label className="block text-sm text-zinc-300">
                   Tool
@@ -243,7 +247,7 @@ export default function Page() {
                 {data.latestEntries.map((entry) => (
                   <div key={`${entry.timestamp}-${entry.prompt}`} className="rounded-2xl border border-white/8 bg-white/4 px-4 py-3 text-sm text-zinc-200">
                     <div className="mb-1 flex items-center justify-between text-xs uppercase tracking-[0.2em] text-zinc-500">
-                      <span>{entry.tool}</span>
+                      <span>{entry.tool} · {entry.source ?? "manual"}</span>
                       <span>{entry.minutes}m</span>
                     </div>
                     <div>{entry.prompt}</div>
@@ -270,10 +274,10 @@ export default function Page() {
             <Panel title="Learning Loop" subtitle="Persistent, local, and inspectable">
               <div className="space-y-4 text-sm leading-6 text-zinc-300">
                 <p>
-                  This app does not give one-off zero-context advice. It builds a cumulative local memory profile from both logged AI interactions and passive activity samples from the frontmost app/window.
+                  This app does not give one-off zero-context advice. It automatically tracks AI usage time from supported tools and combines that with passive activity samples from the frontmost app/window.
                 </p>
                 <p>
-                  Over time it learns recurring work contexts, strongest usage modes, missed-opportunity moments, weak prompt habits, and benchmark trends. That profile is stored locally and can be inspected or deleted.
+                  Prompt Coach stays separate because that is the high-signal layer for prompt quality. Time tracking is automatic; prompt-level coaching stays intentional.
                 </p>
                 <ListBlock
                   title="Current coaching hypotheses"

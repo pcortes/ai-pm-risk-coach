@@ -36,6 +36,10 @@ export async function POST(request: NextRequest) {
       contextAppName: body.contextAppName ?? activeContext.appName,
       contextWindowTitle: body.contextWindowTitle ?? activeContext.windowTitle,
       contextWorkMode: body.contextWorkMode ?? activeContext.workMode,
+      source: body.source ?? "manual",
+      promptCaptureMode: body.promptCaptureMode ?? "full_prompt",
+      sessionStartedAt: body.sessionStartedAt ?? null,
+      sessionEndedAt: body.sessionEndedAt ?? null,
     };
 
     await appendUsageEntry(entry);

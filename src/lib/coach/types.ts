@@ -1,3 +1,7 @@
+export type UsageSource = "manual" | "auto";
+
+export type PromptCaptureMode = "full_prompt" | "window_title" | "context_only";
+
 export interface CoachUsageEntry {
   timestamp: string;
   tool: string;
@@ -10,6 +14,10 @@ export interface CoachUsageEntry {
   contextAppName?: string | null;
   contextWindowTitle?: string | null;
   contextWorkMode?: string | null;
+  source?: UsageSource;
+  promptCaptureMode?: PromptCaptureMode;
+  sessionStartedAt?: string | null;
+  sessionEndedAt?: string | null;
 }
 
 export interface PromptAssessment {
@@ -30,6 +38,7 @@ export interface DailySummary {
   date: string;
   interactions: number;
   minutes: number;
+  qualitySignals: number;
   topTools: { name: string; count: number }[];
   topCategories: { name: string; count: number }[];
   topTags: { name: string; count: number }[];
@@ -59,6 +68,25 @@ export interface ActivitySample {
   appName: string | null;
   windowTitle: string | null;
   workMode: string;
+}
+
+export interface AutoUsageSession {
+  startedAt: string;
+  lastSeenAt: string;
+  tool: string;
+  appName: string | null;
+  windowTitle: string | null;
+  workMode: string;
+  promptCaptureMode: PromptCaptureMode;
+}
+
+export interface AutoCaptureStatus {
+  enabled: boolean;
+  detectedTool: string | null;
+  currentSessionMinutes: number;
+  promptCaptureMode: PromptCaptureMode | null;
+  lastAutoEntryAt: string | null;
+  note: string;
 }
 
 export interface LearnedFact {
@@ -125,6 +153,7 @@ export interface CoachSuggestion {
 export interface CoachSnapshot {
   generatedAt: string;
   activeContext: ActiveContext;
+  autoCapture: AutoCaptureStatus;
   today: DailySummary;
   benchmark: {
     amountDelta: number;

@@ -37,6 +37,10 @@ const stopwords = new Set([
 ]);
 
 export function assessPrompt(entry: CoachUsageEntry): PromptAssessment {
+  if (entry.source === "auto") {
+    return assessAutoCapturedUsage(entry);
+  }
+
   const prompt = entry.prompt.trim();
   const lowered = prompt.toLowerCase();
   const strengths: string[] = [];
@@ -113,7 +117,8 @@ export function detectCategories(entry: CoachUsageEntry): string[] {
 }
 
 export function scoreDay(entries: CoachUsageEntry[]): { scoreCard: ScoreCard; assessments: PromptAssessment[] } {
-  const assessments = entries.map(assessPrompt);
+  const promptEntries = entries.filter((entry) => entry.source !== "auto");
+  const assessments = promptEntries.map(assessPrompt);
   const amount = scoreAmount(entries);
   const quality = assessments.length === 0 ? 0 : Math.round(assessments.reduce((sum, item) => sum + item.score, 0) / assessments.length);
   const leverage = Math.round(amount * 0.45 + quality * 0.55);
@@ -124,6 +129,19 @@ export function scoreDay(entries: CoachUsageEntry[]): { scoreCard: ScoreCard; as
       leverage,
     },
     assessments,
+  };
+}
+
+function assessAutoCapturedUsage(entry: CoachUsageEntry): PromptAssessment {
+  const categories = detectCategories(entry);
+  const score = entry.promptCaptureMode === "window_title" ? 58 : 50;
+
+  return {
+    score: clamp(score + Math.min(12, categories.length * 4), 0, 100),
+    strengths: ["Usage was captured automatically from an active AI tool."],
+    gaps: ["Prompt-level quality is not available unless you paste a prompt into Prompt Coach."],
+    categories,
+    rewrite: "Paste a real prompt into Prompt Coach if you want prompt-level feedback. Auto-capture is meant to track usage time and tool context, not inspect hidden prompt contents.",
   };
 }
 

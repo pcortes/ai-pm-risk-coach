@@ -5,6 +5,7 @@ import { getActiveContext } from "./active-context";
 import { readActivitySamples, readUsageEntries, recordActivitySample, writeMemoryProfile } from "./storage";
 import { ActivitySample, CoachSnapshot, CoachUsageEntry, DailySummary } from "./types";
 import { localDateKey } from "./time";
+import { syncAutomaticUsageCapture } from "./auto-capture";
 
 export async function buildCoachSnapshot(now = new Date()): Promise<CoachSnapshot> {
   const activeContext = await getActiveContext();
@@ -15,6 +16,7 @@ export async function buildCoachSnapshot(now = new Date()): Promise<CoachSnapsho
     workMode: activeContext.workMode,
   });
 
+  const autoCapture = await syncAutomaticUsageCapture(activeContext, now);
   const entries = await readUsageEntries();
   const activitySamples = await readActivitySamples();
   const todayKey = localDateKey(now);
@@ -27,6 +29,7 @@ export async function buildCoachSnapshot(now = new Date()): Promise<CoachSnapsho
     date: todayKey,
     interactions: todayEntries.length,
     minutes: todayEntries.reduce((sum, entry) => sum + Math.max(0, entry.minutes), 0),
+    qualitySignals: todayEntries.filter((entry) => entry.source !== "auto").length,
     topTools: topCounts(todayEntries.map((entry) => entry.tool)),
     topCategories: topCounts(todayEntries.flatMap((entry) => detectCategories(entry))),
     topTags: topCounts(todayEntries.flatMap((entry) => entry.tags)),
@@ -35,6 +38,7 @@ export async function buildCoachSnapshot(now = new Date()): Promise<CoachSnapsho
 
   const liveAdvice = buildLiveAdvice({
     activeContext,
+    autoCapture,
     activitySamples,
     todayEntries,
     assessments,
@@ -51,6 +55,7 @@ export async function buildCoachSnapshot(now = new Date()): Promise<CoachSnapsho
   return {
     generatedAt: new Date().toISOString(),
     activeContext,
+    autoCapture,
     today,
     benchmark: {
       amountDelta: today.scoreCard.amount - memoryProfile.trend.last7Amount,
@@ -66,6 +71,7 @@ export async function buildCoachSnapshot(now = new Date()): Promise<CoachSnapsho
 
 function buildLiveAdvice(input: {
   activeContext: CoachSnapshot["activeContext"];
+  autoCapture: CoachSnapshot["autoCapture"];
   activitySamples: ActivitySample[];
   todayEntries: CoachUsageEntry[];
   assessments: ReturnType<typeof scoreDay>["assessments"];
@@ -73,6 +79,7 @@ function buildLiveAdvice(input: {
 }) {
   const advice: string[] = [];
   advice.push(input.activeContext.opportunity);
+  advice.push(input.autoCapture.note);
 
   if (input.todayEntries.length === 0) {
     advice.push("No AI interactions logged yet today. Start with one structured prompt on your highest-stakes decision.");

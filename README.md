@@ -39,6 +39,7 @@ The current version includes:
 - Next.js app and local API routes
 - active macOS app/window detection
 - passive activity sampling with local deduping
+- automatic AI session capture from supported tools/windows
 - daily usage log stored locally
 - prompt scoring
 - prompt rewrites
@@ -54,7 +55,8 @@ Current scope:
 - reads the active app name
 - tries to read the active window title
 - stores lightweight passive activity samples locally
-- stores only the prompts and metadata the user logs or pastes
+- auto-tracks time in supported AI tools from the active window
+- stores prompts only when the user pastes them into Prompt Coach or saves them manually
 
 Current non-goals:
 - OCR of the whole screen
@@ -99,6 +101,9 @@ Files:
 
 So yes: the app can "learn" the user over time, but in an explicit, inspectable, deterministic way.
 
+It does not require manual logging for time tracking.
+Manual input is only for prompt-level coaching.
+
 ## Architecture
 
 High-level flow:
@@ -114,7 +119,7 @@ High-level flow:
    - live advice
    - suggestion queue
 4. `/api/prompt-score` scores a draft prompt live
-5. `/api/entries` stores new usage entries into local JSONL
+5. `/api/entries` stores optional manual entries into local JSONL
    - and captures the active context when the entry is logged
 
 Main modules:
@@ -175,13 +180,14 @@ The app will:
 - show gaps
 - rewrite it into a stronger version
 
-### 3. Log meaningful interactions
+### 3. Let auto-capture do the time tracking
 
-Each log entry improves:
-- daily scoring
-- benchmark accuracy
-- memory profile quality
-- tomorrow’s suggestions
+The app auto-tracks supported AI tools from the active window.
+
+Manual save is optional and mainly improves:
+- prompt-quality history
+- benchmark accuracy for prompt quality
+- richer context for tomorrow’s suggestions
 
 ### 4. Use the suggestion queue
 

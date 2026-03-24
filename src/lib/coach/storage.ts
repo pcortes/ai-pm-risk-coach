@@ -1,12 +1,13 @@
 import { appendFile, mkdir, readFile, writeFile } from "fs/promises";
 import { homedir } from "os";
 import { join } from "path";
-import { ActivitySample, CoachUsageEntry, MemoryProfile } from "./types";
+import { ActivitySample, AutoUsageSession, CoachUsageEntry, MemoryProfile } from "./types";
 
 const DATA_DIR = join(homedir(), ".ai-pm-risk-coach");
 const USAGE_LOG = join(DATA_DIR, "usage.jsonl");
 const ACTIVITY_LOG = join(DATA_DIR, "activity.jsonl");
 const ACTIVITY_STATE_FILE = join(DATA_DIR, "activity-state.json");
+const AUTO_SESSION_FILE = join(DATA_DIR, "auto-session.json");
 const PROFILE_FILE = join(DATA_DIR, "profile.json");
 
 export async function ensureCoachDataDir() {
@@ -48,6 +49,28 @@ export async function readActivitySamples(): Promise<ActivitySample[]> {
 export async function appendUsageEntry(entry: CoachUsageEntry) {
   await ensureCoachDataDir();
   await appendFile(USAGE_LOG, `${JSON.stringify(entry)}\n`, "utf8");
+}
+
+export async function readAutoUsageSession(): Promise<AutoUsageSession | null> {
+  try {
+    const raw = await readFile(AUTO_SESSION_FILE, "utf8");
+    return JSON.parse(raw) as AutoUsageSession;
+  } catch {
+    return null;
+  }
+}
+
+export async function writeAutoUsageSession(session: AutoUsageSession) {
+  await ensureCoachDataDir();
+  await writeFile(AUTO_SESSION_FILE, JSON.stringify(session, null, 2), "utf8");
+}
+
+export async function clearAutoUsageSession() {
+  try {
+    await writeFile(AUTO_SESSION_FILE, "", "utf8");
+  } catch {
+    // ignore
+  }
 }
 
 export async function recordActivitySample(sample: ActivitySample) {
