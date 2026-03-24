@@ -1,0 +1,81 @@
+{
+  "name": "ai-pm-risk-coach",
+  "version": "0.9.0",
+  "description": "Desktop coach for improving AI prompting, usage quality, and decision leverage over time",
+  "author": "Philip Cortes",
+  "license": "MIT",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "format": "biome format --write",
+    "format:check": "biome format",
+    "typecheck": "tsc --noEmit",
+    "electron:dev": "concurrently --kill-others \"next dev -p 3200\" \"wait-on http://localhost:3200 && electron .\"",
+    "electron:build": "next build && node scripts/prepare-build.js && electron-builder --mac --publish never",
+    "electron:pack": "next build && node scripts/prepare-build.js && electron-builder --mac --dir",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "next": "^16.2.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "swr": "^2.4.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.8",
+    "@tailwindcss/postcss": "^4.2.2",
+    "@types/node": "^20",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "concurrently": "^9.2.1",
+    "electron": "^41.0.0",
+    "electron-builder": "^26.8.1",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.2.0",
+    "postcss": "^8",
+    "tailwindcss": "^4.2.2",
+    "typescript": "^5",
+    "vitest": "^4.1.0",
+    "wait-on": "^9.0.4"
+  },
+  "build": {
+    "appId": "com.ai-pm-risk-coach.app",
+    "productName": "AI PM Risk Coach",
+    "directories": {
+      "output": "dist"
+    },
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "icon": "public/icon.png",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "notarize": true,
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "files": [
+      "electron/**/*"
+    ],
+    "afterPack": "./scripts/after-pack.js"
+  }
+}
