@@ -274,10 +274,10 @@ export default function Page() {
             <Panel title="Learning Loop" subtitle="Persistent, local, and inspectable">
               <div className="space-y-4 text-sm leading-6 text-zinc-300">
                 <p>
-                  This app does not give one-off zero-context advice. It automatically tracks AI usage time from supported tools and combines that with passive activity samples from the frontmost app/window.
+                  This app does not give one-off zero-context advice. It automatically tracks AI usage time from dedicated AI apps and combines that with passive activity samples from the frontmost app/window.
                 </p>
                 <p>
-                  Prompt Coach stays separate because that is the high-signal layer for prompt quality. Time tracking is automatic; prompt-level coaching stays intentional.
+                  Prompt Coach stays separate because that is the high-signal layer for prompt quality. Browser usage is intentionally not monitored. Time tracking is automatic only for explicit AI tools; prompt-level coaching stays intentional.
                 </p>
                 <ListBlock
                   title="Current coaching hypotheses"

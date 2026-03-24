@@ -2,24 +2,24 @@ import { describe, expect, it } from "vitest";
 import { detectAutomaticAiContext } from "./auto-capture";
 
 describe("detectAutomaticAiContext", () => {
-  it("detects AI tool usage from the active window title", () => {
+  it("detects dedicated AI app usage", () => {
     const detection = detectAutomaticAiContext({
-      appName: "Google Chrome",
-      windowTitle: "ChatGPT - AI risk memo draft",
-      workMode: "browser",
+      appName: "Cursor",
+      windowTitle: "AI risk memo draft",
+      workMode: "research",
       opportunity: "",
     });
 
     expect(detection).toEqual({
-      tool: "chatgpt",
+      tool: "cursor",
       promptCaptureMode: "window_title",
     });
   });
 
-  it("ignores non-AI windows", () => {
+  it("ignores browser usage entirely", () => {
     const detection = detectAutomaticAiContext({
       appName: "Google Chrome",
-      windowTitle: "Monster Jam Tickets Apr 05, 2026 Oakland, CA | Ticketmaster",
+      windowTitle: "ChatGPT - AI risk memo draft",
       workMode: "browser",
       opportunity: "",
     });

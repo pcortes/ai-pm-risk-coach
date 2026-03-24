@@ -39,7 +39,7 @@ The current version includes:
 - Next.js app and local API routes
 - active macOS app/window detection
 - passive activity sampling with local deduping
-- automatic AI session capture from supported tools/windows
+- automatic AI session capture from dedicated AI apps
 - daily usage log stored locally
 - prompt scoring
 - prompt rewrites
@@ -55,7 +55,7 @@ Current scope:
 - reads the active app name
 - tries to read the active window title
 - stores lightweight passive activity samples locally
-- auto-tracks time in supported AI tools from the active window
+- auto-tracks time in dedicated AI apps from the active window
 - stores prompts only when the user pastes them into Prompt Coach or saves them manually
 
 Current non-goals:
@@ -101,7 +101,7 @@ Files:
 
 So yes: the app can "learn" the user over time, but in an explicit, inspectable, deterministic way.
 
-It does not require manual logging for time tracking.
+It does not require manual logging for time tracking inside dedicated AI apps.
 Manual input is only for prompt-level coaching.
 
 ## Architecture

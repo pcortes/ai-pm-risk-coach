@@ -4,15 +4,16 @@ import { appendUsageEntry, clearAutoUsageSession, readAutoUsageSession, readUsag
 const AUTO_IDLE_FLUSH_MS = 90 * 1000;
 const AUTO_MIN_SESSION_MS = 45 * 1000;
 
-const AI_TOOL_PATTERNS: Array<{ tool: string; labels: string[] }> = [
-  { tool: "chatgpt", labels: ["chatgpt", "openai"] },
-  { tool: "claude", labels: ["claude", "anthropic"] },
-  { tool: "gemini", labels: ["gemini", "bard"] },
-  { tool: "meta-ai", labels: ["meta ai", "meta.ai"] },
-  { tool: "perplexity", labels: ["perplexity"] },
-  { tool: "grok", labels: ["grok"] },
-  { tool: "cursor", labels: ["cursor"] },
-  { tool: "copilot", labels: ["copilot"] },
+const BROWSER_APPS = new Set(["google chrome", "chrome", "arc", "safari", "firefox", "microsoft edge", "edge"]);
+
+const AI_TOOL_PATTERNS: Array<{ tool: string; appLabels: string[] }> = [
+  { tool: "claude", appLabels: ["claude"] },
+  { tool: "cursor", appLabels: ["cursor"] },
+  { tool: "copilot", appLabels: ["copilot"] },
+  { tool: "gemini", appLabels: ["gemini"] },
+  { tool: "perplexity", appLabels: ["perplexity"] },
+  { tool: "grok", appLabels: ["grok"] },
+  { tool: "meta-ai", appLabels: ["meta ai", "metaai"] },
 ];
 
 export async function syncAutomaticUsageCapture(activeContext: ActiveContext, now = new Date()): Promise<AutoCaptureStatus> {
@@ -64,12 +65,16 @@ export async function syncAutomaticUsageCapture(activeContext: ActiveContext, no
 }
 
 export function detectAutomaticAiContext(activeContext: ActiveContext): { tool: string; promptCaptureMode: PromptCaptureMode } | null {
-  const haystack = `${activeContext.appName ?? ""} ${activeContext.windowTitle ?? ""}`.toLowerCase();
+  const appName = activeContext.appName?.trim().toLowerCase() ?? "";
+  if (!appName || BROWSER_APPS.has(appName)) {
+    return null;
+  }
+
   for (const pattern of AI_TOOL_PATTERNS) {
-    if (pattern.labels.some((label) => haystack.includes(label))) {
+    if (pattern.appLabels.some((label) => appName.includes(label))) {
       return {
         tool: pattern.tool,
-        promptCaptureMode: hasMeaningfulWindowTitle(activeContext.windowTitle, pattern.labels)
+        promptCaptureMode: hasMeaningfulWindowTitle(activeContext.windowTitle, pattern.appLabels)
           ? "window_title"
           : "context_only",
       };
@@ -86,11 +91,11 @@ function buildAutoCaptureStatus(session: AutoUsageSession | null, detectedTool: 
     enabled: true,
     detectedTool,
     currentSessionMinutes,
-    promptCaptureMode: session?.promptCaptureMode ?? null,
-    lastAutoEntryAt: null,
-    note: session
+      promptCaptureMode: session?.promptCaptureMode ?? null,
+      lastAutoEntryAt: null,
+      note: session
       ? `Tracking ${session.tool} automatically from ${session.promptCaptureMode === "window_title" ? "window title" : "context only"}.`
-      : "Auto-capture is on. Open ChatGPT, Claude, Gemini, Meta AI, Perplexity, Grok, Cursor, or Copilot and the app will track time automatically.",
+      : "Auto-capture is on for dedicated AI apps. Browser usage is intentionally not monitored.",
   };
 }
 
