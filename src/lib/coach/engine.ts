@@ -7,7 +7,7 @@ import { ActivitySample, CoachSnapshot, CoachUsageEntry, DailySummary } from "./
 import { localDateKey } from "./time";
 import { syncAutomaticUsageCapture } from "./auto-capture";
 import { discoverClaudeSessions } from "../monitor/claude-sessions";
-import { buildDailyCoachBrief, buildSessionMonitorFromCoachedSessions } from "./session-intelligence";
+import { buildSessionMonitorFromCoachedSessions } from "./session-intelligence";
 import { syncClaudeSessionCapture } from "./session-capture";
 import { applyLlmCoachAnalysis, getCachedLlmCoachAnalysis, shouldWarmLlmCoachAnalysis, warmLlmCoachAnalysis } from "./llm-coach";
 
@@ -42,23 +42,6 @@ export async function buildCoachSnapshot(now = new Date()): Promise<CoachSnapsho
     scoreCard,
   };
 
-  const fallbackDailyCoach = buildDailyCoachBrief({
-    sessions: sessionCapture.activeSessions,
-    profile: memoryProfile,
-    todayMinutes: today.minutes,
-    todayInteractions: today.interactions,
-  });
-
-  const fallbackLiveAdvice = buildLiveAdvice({
-    activeContext,
-    autoCapture,
-    sessionMonitor: buildSessionMonitorFromCoachedSessions(sessionCapture.activeSessions),
-    activitySamples,
-    todayEntries,
-    assessments,
-    profile: memoryProfile,
-  });
-
   const llmInput = {
     activeContext,
     sessions: sessionCapture.activeSessions,
@@ -73,14 +56,21 @@ export async function buildCoachSnapshot(now = new Date()): Promise<CoachSnapsho
     recentEntries: todayEntries.length > 0 ? todayEntries : combinedEntries.slice(-8),
   };
   const llmAnalysis = await getCachedLlmCoachAnalysis(llmInput);
-  if (!llmAnalysis && (await shouldWarmLlmCoachAnalysis(llmInput))) {
+  const shouldWarm = !llmAnalysis && (await shouldWarmLlmCoachAnalysis(llmInput));
+  if (shouldWarm) {
     void warmLlmCoachAnalysis(llmInput);
   }
 
   const coached = applyLlmCoachAnalysis(sessionCapture.activeSessions, llmAnalysis);
   const sessionMonitor = buildSessionMonitorFromCoachedSessions(coached.sessions);
-  const liveAdvice = llmAnalysis ? coached.liveAdvice : fallbackLiveAdvice;
-  const dailyCoach = llmAnalysis ? coached.dailyCoach : fallbackDailyCoach;
+  const liveAdvice = coached.liveAdvice;
+  const dailyCoach = coached.dailyCoach;
+  const coachSource = llmAnalysis ? "claude_cached" : "fallback";
+  const coachStatusNote = llmAnalysis
+    ? "Using Claude-generated coaching from the local Claude Code CLI cache."
+    : shouldWarm
+      ? "Monitoring is live. Waiting for Claude Code to return a real coaching analysis in the background."
+      : "Monitoring is live, but Claude-generated coaching is unavailable or in retry backoff.";
 
   const suggestionQueue = buildSuggestionQueue(
     activeContext.workMode,
@@ -91,6 +81,8 @@ export async function buildCoachSnapshot(now = new Date()): Promise<CoachSnapsho
 
   return {
     generatedAt: new Date().toISOString(),
+    coachSource,
+    coachStatusNote,
     activeContext,
     autoCapture,
     sessionMonitor,
@@ -106,63 +98,6 @@ export async function buildCoachSnapshot(now = new Date()): Promise<CoachSnapsho
     suggestionQueue,
     latestEntries: todayEntries.slice(-5).reverse(),
   };
-}
-
-function buildLiveAdvice(input: {
-  activeContext: CoachSnapshot["activeContext"];
-  autoCapture: CoachSnapshot["autoCapture"];
-  sessionMonitor: CoachSnapshot["sessionMonitor"];
-  activitySamples: ActivitySample[];
-  todayEntries: CoachUsageEntry[];
-  assessments: ReturnType<typeof scoreDay>["assessments"];
-  profile: CoachSnapshot["memoryProfile"];
-}) {
-  const advice: string[] = [];
-  const focusSession = input.sessionMonitor.sessions.find(
-    (session) => session.status !== "idle" || session.taskTitle || session.previewUser,
-  );
-
-  if (input.sessionMonitor.cues.length > 0) {
-    advice.push(...input.sessionMonitor.cues.map((cue) => `${cue.title}: ${cue.action}`));
-  } else {
-    advice.push(input.activeContext.opportunity);
-  }
-
-  if (focusSession?.worldClassMoves[0]) {
-    advice.push(`World-class move: ${focusSession.worldClassMoves[0]}`);
-  } else {
-    advice.push(input.autoCapture.note);
-  }
-
-  if (input.todayEntries.length === 0) {
-    advice.push("No AI interactions logged yet today. Start with one structured prompt on your highest-stakes decision.");
-  } else if (input.todayEntries.length < 3) {
-    advice.push("You have some usage today, but not enough depth yet. Push one session into a reusable artifact, rubric, or decision packet.");
-  }
-
-  const weakPrompt = input.assessments.find((item) => item.score < 60);
-  if (weakPrompt) {
-    const mainGap = weakPrompt.gaps[0] ?? "add more structure";
-    advice.push(`Your latest weaker prompt suggests a recurring issue: ${mainGap}`);
-  }
-
-  if (input.profile.opportunityGaps[0]) {
-    advice.push(
-      `Profile signal: you spend more time in ${input.profile.opportunityGaps[0].workMode} than your AI usage suggests. ${input.profile.opportunityGaps[0].advice}`,
-    );
-  }
-
-  if (input.profile.coachingHypotheses[0]) {
-    advice.push(`Learning over time: ${input.profile.coachingHypotheses[0].recommendation}`);
-  } else if (input.profile.coachingPriorities.length > 0) {
-    advice.push(`Longer-term coaching priority: ${input.profile.coachingPriorities[0]}`);
-  }
-
-  if (input.sessionMonitor.activeCount === 0 && input.activitySamples.length > 0 && input.todayEntries.length === 0) {
-    advice.push("The coach is seeing work context, but today still lacks a real AI session. Start with a high-stakes decision, eval, or harness design pass.");
-  }
-
-  return Array.from(new Set(advice.filter(Boolean))).slice(0, 4);
 }
 
 function topCounts(values: string[]) {

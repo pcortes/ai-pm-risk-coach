@@ -214,15 +214,64 @@ On first launch, the app should open quickly.
 What happens next:
 - the base coach snapshot returns immediately
 - Claude Code session monitoring appears right away if sessions are active
-- prompt coach works immediately
+- the app does not show fake heuristic coaching while Claude is unavailable
 - memory profile appears immediately from local logs if they exist
 - richer Claude-generated coaching may appear on a later refresh if cache is empty and local `Claude Code` is available
 
 If the richer coach layer is unavailable:
 - the app should still load
 - the dashboard should still work
-- fallback coaching should still appear
-- the main missing piece will be the deeper session-specific and daily LLM coaching
+- the app should stay in monitoring-only mode for coaching surfaces
+- the main missing piece will be the deeper session-specific and daily Claude-generated coaching
+
+## How To Check Whether Claude Coaching Is Working
+
+The app exposes this directly in the snapshot and UI.
+
+### In the app
+
+Look in `Live Context`:
+- `Coach mode: Claude-generated coaching` means the richer Claude Code coaching layer is active
+- `Coach mode: Fallback coaching` means the app is running on the local monitor/memory layer only
+
+### From the API
+
+Run:
+
+```bash
+curl -sS http://localhost:3200/api/coach | jq '{coachSource, coachStatusNote}'
+```
+
+Expected values:
+- `"coachSource": "claude_cached"` means Claude-generated coaching is working
+- `"coachSource": "fallback"` means the app is still working, but it is intentionally not showing fake heuristic coaching
+
+### Check the local Claude Code CLI directly
+
+Run:
+
+```bash
+claude --print --output-format json --max-turns 1 -- 'Return JSON only: {"ok": true}'
+```
+
+What you want:
+- a successful JSON response
+
+What it means if it fails:
+- if it says something like `Please run /login`, then Claude Code is not logged in for that machine/session yet
+- the app will still work, but the richer coaching layer will stay in monitoring-only fallback mode
+
+### Check the cache file
+
+The richer coach layer writes a local cache:
+
+```bash
+cat ~/.ai-pm-risk-coach/llm-coach-cache.json
+```
+
+What to look for:
+- `"status": "success"` means Claude-generated coaching completed and cached
+- `"status": "error"` means the app fell back safely and will retry later
 
 ## Install
 
@@ -335,6 +384,7 @@ If you are sending this repo to a new user:
 - tell them to run `npm run electron:dev`
 - tell them the app is useful immediately, even before richer Claude coaching warms
 - tell them richer coaching depends on a local `Claude Code` login, not on any API key in the repo
+- tell them how to check `coachSource` in `/api/coach` if they want to confirm the richer coaching layer is active
 
 ## Good Next Steps
 

@@ -245,6 +245,8 @@ export interface SessionMonitorSummary {
 
 export interface CoachSnapshot {
   generatedAt: string;
+  coachSource: "claude_cached" | "fallback";
+  coachStatusNote: string;
   activeContext: ActiveContext;
   autoCapture: AutoCaptureStatus;
   sessionMonitor: SessionMonitorSummary;

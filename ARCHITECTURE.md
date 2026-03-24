@@ -151,6 +151,12 @@ Runtime expectation:
 - first paint should not wait for a fresh Claude analysis
 - a fresh Claude analysis is opportunistic and cache-backed
 - the app must stay usable even when Claude enrichment is unavailable
+- if Claude enrichment is unavailable, the app should not invent fake heuristic coaching in its place
+
+Operational check:
+- `/api/coach` now returns `coachSource` and `coachStatusNote`
+- `coachSource: "claude_cached"` means cached Claude-generated coaching was merged
+- `coachSource: "fallback"` means the dashboard is running on the local substrate only and coaching surfaces should stay monitoring-only
 
 ### `/api/prompt-score`
 
@@ -203,6 +209,11 @@ That layer is:
 - dependent on an existing `Claude Code` login
 - never dependent on an API key stored in this repo
 - expected to fail safely without breaking the main dashboard
+
+Verification path:
+1. confirm `claude --print ...` works locally
+2. confirm `/api/coach` returns `coachSource: "claude_cached"`
+3. confirm `~/.ai-pm-risk-coach/llm-coach-cache.json` shows `"status": "success"`
 
 This gives fast UI plus room for world-class coaching depth.
 

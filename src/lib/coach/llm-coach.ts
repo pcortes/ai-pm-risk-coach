@@ -68,6 +68,9 @@ export async function shouldWarmLlmCoachAnalysis(input: {
 }) {
   const { fingerprint } = buildPreparedInput(input);
   const cached = await readCache();
+  if (cached && (cached.status ?? "success") === "error" && Date.now() - Date.parse(cached.generatedAt) < ERROR_RETRY_MS) {
+    return false;
+  }
   if (!cached || cached.fingerprint !== fingerprint) return true;
   if (cached.analysis) return false;
   if ((cached.status ?? "success") !== "error") return true;

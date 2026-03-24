@@ -62,6 +62,19 @@ You should quickly understand:
 - the Claude monitor comes from the original working `claude-control` substrate
 - the app should load fast even if richer Claude coaching is unavailable
 - there is no API-key path in this repo; richer coaching depends on local `Claude Code` login
+- if Claude-generated coaching is unavailable, visible coaching should stay minimal/monitoring-only rather than falling back to fake heuristic mentor output
+
+## How To Verify Claude Coaching
+
+If you need to verify the richer coach layer:
+
+1. run `claude --print --output-format json --max-turns 1 -- 'Return JSON only: {"ok": true}'`
+2. run `curl -sS http://localhost:3200/api/coach | jq '{coachSource, coachStatusNote}'`
+3. check `~/.ai-pm-risk-coach/llm-coach-cache.json`
+
+Interpretation:
+- `coachSource: "claude_cached"` means Claude-generated coaching is active
+- `coachSource: "fallback"` means the app is operating correctly, but richer coaching is not currently available
 
 ## Design Rules
 

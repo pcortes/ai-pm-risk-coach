@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import useSWR from "swr";
-import { CoachSnapshot, PromptAssessment } from "@/lib/coach/types";
+import { CoachSnapshot } from "@/lib/coach/types";
 
 const fetcher = (url: string) =>
   fetch(url).then((response) => {
@@ -27,30 +27,7 @@ export default function Page() {
     refreshInterval: 5000,
     revalidateOnFocus: false,
   });
-  const [draftPrompt, setDraftPrompt] = useState("");
-  const [promptAssessment, setPromptAssessment] = useState<PromptAssessment | null>(null);
   const sessionMonitor = data?.sessionMonitor ?? EMPTY_SESSION_MONITOR;
-
-  useEffect(() => {
-    if (!draftPrompt.trim()) {
-      setPromptAssessment(null);
-      return;
-    }
-
-    const timeout = setTimeout(async () => {
-      const response = await fetch("/api/prompt-score", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: draftPrompt }),
-      });
-
-      if (!response.ok) return;
-      const payload = (await response.json()) as PromptAssessment;
-      setPromptAssessment(payload);
-    }, 250);
-
-    return () => clearTimeout(timeout);
-  }, [draftPrompt]);
 
   return (
     <div className="space-y-6">
@@ -75,6 +52,8 @@ export default function Page() {
 
       {data && (
         <>
+          <CoachStatusBanner source={data.coachSource} note={data.coachStatusNote} />
+
           <section className="grid gap-4 lg:grid-cols-4">
             <MetricCard
               title="Amount"
@@ -173,6 +152,10 @@ export default function Page() {
                 <InfoBlock label="Auto capture" value={data.autoCapture.detectedTool ? `Tracking ${data.autoCapture.detectedTool}` : "Standing by"} />
                 <InfoBlock label="Claude monitor" value={sessionMonitor.note} />
               </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <InfoBlock label="Coach mode" value={data.coachSource === "claude_cached" ? "Claude-generated coaching" : "Fallback coaching"} />
+                <InfoBlock label="Coach status" value={data.coachStatusNote} />
+              </div>
               <InfoBlock label="Window title" value={data.activeContext.windowTitle ?? "Unavailable"} />
               <div className="rounded-2xl border border-sky-400/20 bg-sky-400/8 p-4 text-sm leading-6 text-sky-100">
                 {data.activeContext.opportunity}
@@ -238,44 +221,47 @@ export default function Page() {
                       <InfoBlock label="Sophistication" value={`${session.sophisticationScore} / 100`} />
                     </div>
 
-                    <div className="mt-4 grid gap-4 md:grid-cols-2">
-                      <InfoBlock label="Coaching focus" value={session.coachingFocus} />
-                      <InfoBlock label="Expected upgrade" value={session.expectedUpgrade} />
-                    </div>
-
-                    <div className="mt-4 rounded-2xl border border-red-300/15 bg-red-300/6 p-4">
-                      <div className="mb-2 text-xs uppercase tracking-[0.25em] text-red-200/70">Diagnosis</div>
-                      <div className="text-sm leading-6 text-red-50">{session.diagnosis}</div>
-                    </div>
-
-                    <div className="mt-4 rounded-2xl border border-sky-300/20 bg-sky-300/8 p-4">
-                      <div className="mb-2 text-xs uppercase tracking-[0.25em] text-sky-200/70">Next best move</div>
-                      <div className="text-sm leading-6 text-sky-50">{session.nextBestMove}</div>
-                    </div>
-
-                    <CopyablePrompt
-                      label="Send this next"
-                      value={session.promptToSend}
-                    />
-
-                    <div className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-300/8 p-4">
-                      <div className="mb-2 text-xs uppercase tracking-[0.25em] text-emerald-200/70">World-class standard</div>
-                      <div className="text-sm leading-6 text-emerald-50">{session.worldClassStandard}</div>
-                      {session.worldClassMoves.length > 0 && (
-                        <div className="mt-3 space-y-2">
-                          {session.worldClassMoves.map((move) => (
-                            <div key={move} className="rounded-2xl border border-white/8 bg-black/15 px-3 py-2 text-sm leading-6 text-emerald-50">
-                              {move}
-                            </div>
-                          ))}
+                    {data.coachSource === "claude_cached" ? (
+                      <>
+                        <div className="mt-4 grid gap-4 md:grid-cols-2">
+                          <InfoBlock label="Coaching focus" value={session.coachingFocus} />
+                          <InfoBlock label="Expected upgrade" value={session.expectedUpgrade} />
                         </div>
-                      )}
-                    </div>
 
-                    <div className="mt-4 grid gap-4 md:grid-cols-2">
-                      <ListBlock title="Observed rigor" items={session.rigorSignals} empty="No strong rigor signals detected yet." />
-                      <ListBlock title="Likely weaknesses" items={session.weaknessSignals} empty="No major weakness detected right now." />
-                    </div>
+                        <div className="mt-4 rounded-2xl border border-red-300/15 bg-red-300/6 p-4">
+                          <div className="mb-2 text-xs uppercase tracking-[0.25em] text-red-200/70">Diagnosis</div>
+                          <div className="text-sm leading-6 text-red-50">{session.diagnosis}</div>
+                        </div>
+
+                        <div className="mt-4 rounded-2xl border border-sky-300/20 bg-sky-300/8 p-4">
+                          <div className="mb-2 text-xs uppercase tracking-[0.25em] text-sky-200/70">Next best move</div>
+                          <div className="text-sm leading-6 text-sky-50">{session.nextBestMove}</div>
+                        </div>
+
+                        <CopyablePrompt
+                          label="Send this next"
+                          value={session.promptToSend}
+                        />
+
+                        <div className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-300/8 p-4">
+                          <div className="mb-2 text-xs uppercase tracking-[0.25em] text-emerald-200/70">World-class standard</div>
+                          <div className="text-sm leading-6 text-emerald-50">{session.worldClassStandard}</div>
+                          {session.worldClassMoves.length > 0 && (
+                            <div className="mt-3 space-y-2">
+                              {session.worldClassMoves.map((move) => (
+                                <div key={move} className="rounded-2xl border border-white/8 bg-black/15 px-3 py-2 text-sm leading-6 text-emerald-50">
+                                  {move}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-300/8 p-4 text-sm leading-6 text-amber-50">
+                        Real coaching is not shown until Claude Code returns a model-backed analysis. This card is in monitoring-only mode right now.
+                      </div>
+                    )}
 
                     {(session.previewUser || session.previewAssistant) && (
                       <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -289,31 +275,16 @@ export default function Page() {
             </Panel>
 
             <div className="space-y-4">
-              <Panel title="Prompt Coach" subtitle="Optional second pass when you want to sharpen an important prompt before sending it">
-                <textarea
-                  value={draftPrompt}
-                  onChange={(event) => setDraftPrompt(event.target.value)}
-                  placeholder="Paste or draft your current prompt here..."
-                  className="titlebar-no-drag min-h-[220px] w-full rounded-3xl border border-white/10 bg-black/35 px-5 py-4 text-sm leading-6 text-zinc-100 outline-none transition focus:border-sky-400/60 focus:ring-2 focus:ring-sky-400/20"
-                />
-                <div className="mt-4 grid gap-4 md:grid-cols-[0.9fr_1.1fr]">
-                  <div className="space-y-3">
-                    <div className="rounded-2xl border border-white/8 bg-white/4 p-4">
-                      <div className="text-xs uppercase tracking-[0.25em] text-zinc-400">Live score</div>
-                      <div className="mt-2 text-4xl font-semibold text-white">{promptAssessment?.score ?? "--"}</div>
-                    </div>
-                    <div className="rounded-2xl border border-white/8 bg-white/4 p-4 text-sm text-zinc-300">
-                      Categories: {promptAssessment?.categories.join(", ") || "none detected yet"}
-                    </div>
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <ListBlock title="Strengths" items={promptAssessment?.strengths ?? []} empty="No strengths detected yet." />
-                    <ListBlock title="Gaps" items={promptAssessment?.gaps ?? []} empty="No obvious gaps detected." />
-                  </div>
+              <Panel title="Prompt Coach" subtitle="Model-backed prompt coaching only">
+                <div className="rounded-2xl border border-amber-300/20 bg-amber-300/8 p-4 text-sm leading-6 text-amber-50">
+                  Heuristic prompt scoring is intentionally disabled in this build. Prompt coaching should come from real Claude-generated analysis, not regex-style local rules.
                 </div>
-                <div className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-300/8 p-4">
-                  <div className="mb-2 text-xs uppercase tracking-[0.25em] text-amber-200/70">Suggested rewrite</div>
-                  <pre className="whitespace-pre-wrap text-sm leading-6 text-amber-50">{promptAssessment?.rewrite ?? "Paste a prompt to see a stronger rewrite."}</pre>
+                <div className="mt-4 rounded-2xl border border-white/8 bg-black/20 p-4 text-sm leading-6 text-zinc-300">
+                  Current state:
+                  <br />
+                  - live session coaching uses Claude Code when available
+                  <br />
+                  - if Claude coaching is unavailable, this panel stays disabled instead of faking prompt advice
                 </div>
               </Panel>
 
@@ -374,6 +345,36 @@ function MetricCard(props: { title: string; value: string; caption: string; delt
         </div>
       )}
     </div>
+  );
+}
+
+function CoachStatusBanner(props: { source: CoachSnapshot["coachSource"]; note: string }) {
+  const isClaude = props.source === "claude_cached";
+  return (
+    <section
+      className={`rounded-[26px] border px-5 py-4 shadow-[0_12px_50px_rgba(0,0,0,0.22)] ${
+        isClaude
+          ? "border-emerald-300/20 bg-[linear-gradient(135deg,rgba(16,185,129,0.14),rgba(16,185,129,0.05),rgba(255,255,255,0.02))]"
+          : "border-amber-300/20 bg-[linear-gradient(135deg,rgba(245,158,11,0.16),rgba(245,158,11,0.06),rgba(255,255,255,0.02))]"
+      }`}
+    >
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <div className="text-xs uppercase tracking-[0.26em] text-zinc-300/70">Coach Status</div>
+          <div className="mt-2 text-xl font-semibold text-white">
+            {isClaude ? "Claude-generated coaching active" : "Fallback coaching active"}
+          </div>
+        </div>
+        <div
+          className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] ${
+            isClaude ? "bg-emerald-400/15 text-emerald-100" : "bg-amber-300/15 text-amber-50"
+          }`}
+        >
+          {isClaude ? "Claude cache live" : "Fallback mode"}
+        </div>
+      </div>
+      <p className="mt-3 text-sm leading-6 text-zinc-100/90">{props.note}</p>
+    </section>
   );
 }
 
