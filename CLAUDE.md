@@ -16,6 +16,7 @@ It is:
 - a prompt quality scorer
 - a usage benchmarker
 - a cumulative memory-profile system
+- a Claude-session mentor
 
 ## Core Product Question
 
@@ -30,9 +31,10 @@ How do we help one user become dramatically better at using AI for:
 
 - local-first only
 - no server backend
-- no external APIs
+- no API-key path in this repo
 - active app/window awareness only
-- user-logged interactions
+- original `claude-control`-derived Claude Code monitor
+- background-warmed Claude-generated coaching when local `Claude Code` login exists
 - inspectable memory profile
 
 ## Files To Understand First
@@ -40,14 +42,18 @@ How do we help one user become dramatically better at using AI for:
 1. `src/app/page.tsx`
 2. `src/app/api/coach/route.ts`
 3. `src/lib/coach/engine.ts`
-4. `src/lib/coach/profile.ts`
-5. `src/lib/coach/scoring.ts`
-6. `src/lib/coach/storage.ts`
+4. `src/lib/coach/llm-coach.ts`
+5. `src/lib/monitor/claude-sessions.ts`
+6. `src/lib/coach/profile.ts`
+7. `src/lib/coach/scoring.ts`
+8. `src/lib/coach/storage.ts`
 
 ## Design Rules
 
 - prioritize coaching quality over feature count
-- prefer transparent heuristics over hidden complexity
+- use heuristics for substrate and fallback, not as the main coach experience
 - keep the memory/profile system explicit and inspectable
 - avoid converting this into a company/service dashboard
 - optimize for a user who wants to become world-class at AI leverage in risk work
+- keep first load fast; richer coaching can warm in the background
+- never commit or persist secrets in the repo

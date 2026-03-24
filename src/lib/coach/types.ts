@@ -1,6 +1,8 @@
+import type { SessionStatus } from "../monitor/types";
+
 export type UsageSource = "manual" | "auto";
 
-export type PromptCaptureMode = "full_prompt" | "window_title" | "context_only";
+export type PromptCaptureMode = "full_prompt" | "window_title" | "context_only" | "session_preview";
 
 export interface CoachUsageEntry {
   timestamp: string;
@@ -16,6 +18,8 @@ export interface CoachUsageEntry {
   contextWorkMode?: string | null;
   source?: UsageSource;
   promptCaptureMode?: PromptCaptureMode;
+  sessionId?: string | null;
+  sessionProvider?: string | null;
   sessionStartedAt?: string | null;
   sessionEndedAt?: string | null;
 }
@@ -54,6 +58,15 @@ export interface TrendSummary {
   prior7Leverage: number;
 }
 
+export interface DailyTrajectoryPoint {
+  date: string;
+  interactions: number;
+  minutes: number;
+  amount: number;
+  quality: number;
+  leverage: number;
+}
+
 export interface CountMetric {
   name: string;
   count: number;
@@ -89,6 +102,26 @@ export interface AutoCaptureStatus {
   note: string;
 }
 
+export interface TrackedClaudeSessionState {
+  trackingVersion: 2;
+  id: string;
+  startedAt: string;
+  lastSeenAt: string;
+  endedAt: string | null;
+  repoName: string | null;
+  workingDirectory: string;
+  branch: string | null;
+  taskTitle: string | null;
+  taskDescription: string | null;
+  lastUserMessage: string | null;
+  lastAssistantText: string | null;
+  lastToolNames: string[];
+  workType: string;
+  rigorSignals: string[];
+  weaknessSignals: string[];
+  status: SessionStatus;
+}
+
 export interface LearnedFact {
   label: string;
   value: string;
@@ -120,6 +153,7 @@ export interface MemoryProfile {
   totalInteractions: number;
   avgDailyInteractions: number;
   avgDailyMinutes: number;
+  trajectory: DailyTrajectoryPoint[];
   topTools: CountMetric[];
   topCategories: CountMetric[];
   topObservedApps: CountMetric[];
@@ -150,10 +184,71 @@ export interface CoachSuggestion {
   prompt: string;
 }
 
+export interface DailyCoachBrief {
+  headline: string;
+  judgment: string;
+  worldClassBar: string;
+  mainGap: string;
+  rightNow: string[];
+  generally: string[];
+  useCasesToTry: string[];
+  promptIssues: string[];
+  historicalPromptCoaching: string[];
+}
+
+export interface SessionCoachCue {
+  priority: "critical" | "high" | "medium";
+  title: string;
+  evidence: string;
+  action: string;
+}
+
+export interface CoachedSession {
+  id: string;
+  repoName: string | null;
+  workingDirectory: string;
+  branch: string | null;
+  status: SessionStatus;
+  lastActivity: string;
+  startedAt: string | null;
+  sessionMinutes: number;
+  taskTitle: string | null;
+  taskDescription: string | null;
+  previewUser: string | null;
+  previewAssistant: string | null;
+  lastToolNames: string[];
+  workType: string;
+  coachingFocus: string;
+  sophisticationScore: number;
+  rigorSignals: string[];
+  weaknessSignals: string[];
+  diagnosis: string;
+  nextBestMove: string;
+  worldClassStandard: string;
+  promptToSend: string;
+  expectedUpgrade: string;
+  worldClassMoves: string[];
+  transcriptSource: "hook" | "fallback" | null;
+}
+
+export interface SessionMonitorSummary {
+  enabled: boolean;
+  note: string;
+  activeCount: number;
+  workingCount: number;
+  waitingCount: number;
+  erroredCount: number;
+  trackedMinutes: number;
+  cues: SessionCoachCue[];
+  sessions: CoachedSession[];
+}
+
 export interface CoachSnapshot {
   generatedAt: string;
   activeContext: ActiveContext;
   autoCapture: AutoCaptureStatus;
+  sessionMonitor: SessionMonitorSummary;
+  dailyCoach: DailyCoachBrief;
   today: DailySummary;
   benchmark: {
     amountDelta: number;

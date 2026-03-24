@@ -7,7 +7,6 @@ const AUTO_MIN_SESSION_MS = 45 * 1000;
 const BROWSER_APPS = new Set(["google chrome", "chrome", "arc", "safari", "firefox", "microsoft edge", "edge"]);
 
 const AI_TOOL_PATTERNS: Array<{ tool: string; appLabels: string[] }> = [
-  { tool: "claude", appLabels: ["claude"] },
   { tool: "cursor", appLabels: ["cursor"] },
   { tool: "copilot", appLabels: ["copilot"] },
   { tool: "gemini", appLabels: ["gemini"] },
@@ -95,7 +94,7 @@ function buildAutoCaptureStatus(session: AutoUsageSession | null, detectedTool: 
       lastAutoEntryAt: null,
       note: session
       ? `Tracking ${session.tool} automatically from ${session.promptCaptureMode === "window_title" ? "window title" : "context only"}.`
-      : "Auto-capture is on for dedicated AI apps. Browser usage is intentionally not monitored.",
+      : "Auto-capture is on for dedicated AI apps other than Claude Code. Browser usage is intentionally not monitored.",
   };
 }
 

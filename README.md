@@ -37,6 +37,7 @@ This app aims to become a persistent AI PM risk coach that:
 The current version includes:
 - Electron desktop shell
 - Next.js app and local API routes
+- original `claude-control`-derived Claude Code session monitor
 - active macOS app/window detection
 - passive activity sampling with local deduping
 - automatic AI session capture from dedicated AI apps
@@ -45,7 +46,16 @@ The current version includes:
 - prompt rewrites
 - daily amount / quality / leverage scoring
 - cumulative memory profile built from logged history plus passive context
-- suggestion queue based on active context plus the learned profile
+- coach-first dashboard with:
+  - daily coach brief
+  - expertise trajectory
+  - session diagnosis
+  - exact next prompt to send
+  - historical prompt-pattern coaching
+- non-blocking coach route:
+  - fast local snapshot immediately
+  - richer Claude-generated coaching from cache when available
+  - background warming when the cache is missing
 
 ## Important Boundaries
 
@@ -56,7 +66,8 @@ Current scope:
 - tries to read the active window title
 - stores lightweight passive activity samples locally
 - auto-tracks time in dedicated AI apps from the active window
-- stores prompts only when the user pastes them into Prompt Coach or saves them manually
+- reads live Claude Code transcript previews and hook events from local files
+- stores prompts only from prompt coach input or local Claude session previews already present on disk
 
 Current non-goals:
 - OCR of the whole screen
@@ -104,6 +115,19 @@ So yes: the app can "learn" the user over time, but in an explicit, inspectable,
 It does not require manual logging for time tracking inside dedicated AI apps.
 Manual input is only for prompt-level coaching.
 
+## Claude Code Integration
+
+The deeper coaching path uses the local `Claude Code` CLI directly.
+
+Important:
+- no Anthropic API key is stored in this repo
+- no key is read from this repo
+- the app does **not** commit or persist secrets
+- the richer coach path expects the user to already be logged into `Claude Code`
+
+If `Claude Code` is not logged in, the app still returns the fast local coach snapshot and monitor data.
+The Claude-enriched coaching layer just stays unavailable until login exists.
+
 ## Architecture
 
 High-level flow:
@@ -112,14 +136,16 @@ High-level flow:
 2. Next.js serves the UI and local API routes
 3. `/api/coach` builds a live snapshot:
    - current active app/window
+   - live Claude Code sessions from the original monitor substrate
    - passive activity sample
    - today’s scorecard
    - cumulative memory profile
-   - benchmark deltas
-   - live advice
-   - suggestion queue
-4. `/api/prompt-score` scores a draft prompt live
-5. `/api/entries` stores optional manual entries into local JSONL
+    - benchmark deltas
+   - immediate fallback coaching
+4. if a matching Claude-generated coach snapshot is already cached, it is merged in immediately
+5. if no cached Claude coach is ready, the app warms it in the background and picks it up on the next refresh
+6. `/api/prompt-score` scores a draft prompt live
+7. `/api/entries` stores optional manual entries into local JSONL
    - and captures the active context when the entry is logged
 
 Main modules:
@@ -134,8 +160,12 @@ Main modules:
   - frontmost app/window detection on macOS
 - [`src/lib/coach/engine.ts`](src/lib/coach/engine.ts)
   - builds the full live coach snapshot
+- [`src/lib/coach/llm-coach.ts`](src/lib/coach/llm-coach.ts)
+  - cached/background Claude-generated coaching
+- [`src/lib/monitor/claude-sessions.ts`](src/lib/monitor/claude-sessions.ts)
+  - original-session-substrate Claude Code discovery
 - [`src/app/page.tsx`](src/app/page.tsx)
-  - dashboard UI
+  - coach-first UI
 
 For a fuller explanation, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
@@ -183,6 +213,7 @@ The app will:
 ### 3. Let auto-capture do the time tracking
 
 The app auto-tracks supported AI tools from the active window.
+Claude Code sessions are tracked from the transcript/hook substrate, not from generic app-focus guesses.
 
 Manual save is optional and mainly improves:
 - prompt-quality history
@@ -197,6 +228,15 @@ The app will suggest where AI can help more:
 - eval design
 - meeting debriefs
 - prompt upgrades
+
+### 5. Use the session coach as the main surface
+
+Each live Claude session card is supposed to answer:
+- what this session is really doing
+- what is missing
+- what a world-class operator would do next
+- the exact next prompt to send
+- what upgrade that prompt should create
 
 ## Why This Is Better Than Per-Chat Advice
 
@@ -225,7 +265,7 @@ If an LLM is dropped into this repo, the shortest path to understanding is:
 Important design principles:
 - keep it local-first
 - keep it inspectable
-- keep the scoring explainable
+- keep heuristics as substrate and fallback, not the main visible coach
 - prefer personal coaching over generic productivity fluff
 - optimize for AI PM risk decision quality, not just “more AI usage”
 
@@ -244,4 +284,5 @@ Important design principles:
 
 ```bash
 npm run typecheck
+npm run test
 ```

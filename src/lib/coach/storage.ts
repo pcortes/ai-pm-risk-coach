@@ -1,13 +1,14 @@
 import { appendFile, mkdir, readFile, writeFile } from "fs/promises";
 import { homedir } from "os";
 import { join } from "path";
-import { ActivitySample, AutoUsageSession, CoachUsageEntry, MemoryProfile } from "./types";
+import { ActivitySample, AutoUsageSession, CoachUsageEntry, MemoryProfile, TrackedClaudeSessionState } from "./types";
 
 const DATA_DIR = join(homedir(), ".ai-pm-risk-coach");
 const USAGE_LOG = join(DATA_DIR, "usage.jsonl");
 const ACTIVITY_LOG = join(DATA_DIR, "activity.jsonl");
 const ACTIVITY_STATE_FILE = join(DATA_DIR, "activity-state.json");
 const AUTO_SESSION_FILE = join(DATA_DIR, "auto-session.json");
+const CLAUDE_SESSION_STATE_FILE = join(DATA_DIR, "claude-session-state.json");
 const PROFILE_FILE = join(DATA_DIR, "profile.json");
 
 export async function ensureCoachDataDir() {
@@ -71,6 +72,23 @@ export async function clearAutoUsageSession() {
   } catch {
     // ignore
   }
+}
+
+export async function readTrackedClaudeSessionState(): Promise<Record<string, TrackedClaudeSessionState>> {
+  await ensureCoachDataDir();
+  try {
+    const raw = await readFile(CLAUDE_SESSION_STATE_FILE, "utf8");
+    const parsed = JSON.parse(raw) as Record<string, Partial<TrackedClaudeSessionState>>;
+    const filteredEntries = Object.entries(parsed).filter(([, value]) => value.trackingVersion === 2);
+    return Object.fromEntries(filteredEntries) as Record<string, TrackedClaudeSessionState>;
+  } catch {
+    return {};
+  }
+}
+
+export async function writeTrackedClaudeSessionState(state: Record<string, TrackedClaudeSessionState>) {
+  await ensureCoachDataDir();
+  await writeFile(CLAUDE_SESSION_STATE_FILE, JSON.stringify(state, null, 2), "utf8");
 }
 
 export async function recordActivitySample(sample: ActivitySample) {

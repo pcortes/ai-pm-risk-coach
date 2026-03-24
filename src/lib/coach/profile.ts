@@ -4,6 +4,7 @@ import {
   CoachUsageEntry,
   CoachingHypothesis,
   CountMetric,
+  DailyTrajectoryPoint,
   DistributionMetric,
   LearnedFact,
   MemoryProfile,
@@ -20,6 +21,7 @@ export function buildMemoryProfile(entries: CoachUsageEntry[], activitySamples: 
   const avgDailyInteractions = daysTracked === 0 ? 0 : round1(totalInteractions / daysTracked);
   const avgDailyMinutes =
     daysTracked === 0 ? 0 : round1(entries.reduce((sum, entry) => sum + Math.max(0, entry.minutes), 0) / daysTracked);
+  const trajectory = buildTrajectory(usageBuckets);
 
   const assessments = promptEntries.map(assessPrompt);
   const topTools = counter(entries.map((entry) => entry.tool));
@@ -98,6 +100,7 @@ export function buildMemoryProfile(entries: CoachUsageEntry[], activitySamples: 
     totalInteractions,
     avgDailyInteractions,
     avgDailyMinutes,
+    trajectory,
     topTools,
     topCategories,
     topObservedApps,
@@ -120,6 +123,20 @@ export function buildMemoryProfile(entries: CoachUsageEntry[], activitySamples: 
     coachingHypotheses,
     opportunityGaps,
   };
+}
+
+function buildTrajectory(usageBuckets: Array<{ day: string; values: CoachUsageEntry[] }>): DailyTrajectoryPoint[] {
+  return usageBuckets.slice(-21).map((bucket) => {
+    const { scoreCard } = scoreDay(bucket.values);
+    return {
+      date: bucket.day,
+      interactions: bucket.values.length,
+      minutes: bucket.values.reduce((sum, entry) => sum + Math.max(0, entry.minutes), 0),
+      amount: scoreCard.amount,
+      quality: scoreCard.quality,
+      leverage: scoreCard.leverage,
+    };
+  });
 }
 
 function buildLearnedFacts(input: {

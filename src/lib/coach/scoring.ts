@@ -37,6 +37,10 @@ const stopwords = new Set([
 ]);
 
 export function assessPrompt(entry: CoachUsageEntry): PromptAssessment {
+  if (entry.source === "auto" && entry.promptCaptureMode === "session_preview") {
+    return assessSessionPreviewUsage(entry);
+  }
+
   if (entry.source === "auto") {
     return assessAutoCapturedUsage(entry);
   }
@@ -106,12 +110,15 @@ export function detectCategories(entry: CoachUsageEntry): string[] {
   const categories = new Set<string>();
 
   if (hasAny(haystack, ["eval", "rubric", "benchmark", "test set", "criteria"])) categories.add("eval_design");
+  if (hasAny(haystack, ["harness", "judge", "golden", "scorecard", "threshold"])) categories.add("harness_building");
   if (hasAny(haystack, ["red-team", "attack", "abuse", "adversarial", "failure mode"])) categories.add("red_team");
   if (hasAny(haystack, ["memo", "brief", "leadership", "exec", "stakeholder"])) categories.add("leadership_brief");
   if (hasAny(haystack, ["tradeoff", "decision", "warn", "block", "policy"])) categories.add("decision_analysis");
+  if (hasAny(haystack, ["reviewer", "legal", "policy", "eng", "alignment"])) categories.add("stakeholder_alignment");
   if (hasAny(haystack, ["summary", "summarize", "notes", "meeting"])) categories.add("summarization");
   if (hasAny(haystack, ["rewrite this prompt", "improve this prompt", "better prompt"])) categories.add("prompt_improvement");
   if (hasAny(haystack, ["plan", "roadmap", "outline", "steps"])) categories.add("planning");
+  if (hasAny(haystack, ["implement", "fix", "debug", "code", "test", "ship"])) categories.add("implementation");
 
   return Array.from(categories);
 }
@@ -142,6 +149,49 @@ function assessAutoCapturedUsage(entry: CoachUsageEntry): PromptAssessment {
     gaps: ["Prompt-level quality is not available unless you paste a prompt into Prompt Coach."],
     categories,
     rewrite: "Paste a real prompt into Prompt Coach if you want prompt-level feedback. Auto-capture is meant to track usage time and tool context, not inspect hidden prompt contents.",
+  };
+}
+
+function assessSessionPreviewUsage(entry: CoachUsageEntry): PromptAssessment {
+  const categories = detectCategories(entry);
+  const lowered = `${entry.prompt} ${entry.notes ?? ""}`.toLowerCase();
+  const strengths: string[] = ["Coach is reading a real Claude Code session preview instead of a guessed app-focus event."];
+  const gaps: string[] = [];
+  let score = 48;
+
+  if (entry.prompt.split(/\s+/).length >= 8) {
+    score += 8;
+    strengths.push("Session has enough task context to classify the work.");
+  } else {
+    gaps.push("Task framing is too thin to judge whether the session is operating at a world-class bar.");
+  }
+
+  if (hasAny(lowered, ["memo", "rubric", "matrix", "checklist", "table", "brief"])) {
+    score += 12;
+    strengths.push("The session is oriented toward a concrete artifact.");
+  } else {
+    gaps.push("Push Claude toward a concrete artifact instead of open-ended help.");
+  }
+
+  if (hasAny(lowered, ["tradeoff", "counterargument", "failure mode", "criteria", "threshold", "severity"])) {
+    score += 14;
+    strengths.push("The session is using critique or evaluation language.");
+  } else {
+    gaps.push("Add critique language: criteria, failure modes, thresholds, or counterarguments.");
+  }
+
+  if (hasAny(lowered, ["harness", "eval", "benchmark", "golden", "judge"])) {
+    score += 10;
+    strengths.push("The session is pushing toward reusable evaluation infrastructure.");
+  }
+
+  return {
+    score: clamp(score + Math.min(12, categories.length * 4), 0, 100),
+    strengths: dedupe(strengths).slice(0, 4),
+    gaps: dedupe(gaps).slice(0, 4),
+    categories,
+    rewrite:
+      "Next turn: ask for a concrete artifact, explicit decision criteria, and the strongest failure mode or reviewer objection before accepting the answer.",
   };
 }
 

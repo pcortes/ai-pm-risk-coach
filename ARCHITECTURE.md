@@ -12,14 +12,16 @@ The system continuously combines:
 - current local context
 - passive activity samples
 - automatic AI session detection
+- live Claude Code session monitoring from the original `claude-control` substrate
 - today’s logged AI interactions
 - cumulative historical usage
 
 and turns that into:
-- live advice
+- a fast local coach snapshot
 - prompt feedback
 - benchmark comparisons
 - a persistent memory profile
+- cached or background-warmed Claude-generated coaching
 
 ## High-Level Layers
 
@@ -49,11 +51,23 @@ The coaching engine is the real product logic.
 
 Files:
 - [`src/lib/coach/engine.ts`](src/lib/coach/engine.ts)
+- [`src/lib/coach/llm-coach.ts`](src/lib/coach/llm-coach.ts)
 - [`src/lib/coach/scoring.ts`](src/lib/coach/scoring.ts)
 - [`src/lib/coach/profile.ts`](src/lib/coach/profile.ts)
 - [`src/lib/coach/templates.ts`](src/lib/coach/templates.ts)
 - [`src/lib/coach/active-context.ts`](src/lib/coach/active-context.ts)
 - [`src/lib/coach/storage.ts`](src/lib/coach/storage.ts)
+
+### 4. Claude Monitor
+
+The monitor for live Claude sessions comes from the original working `claude-control` code path, adapted into this repo.
+
+Files:
+- [`src/lib/monitor/claude-sessions.ts`](src/lib/monitor/claude-sessions.ts)
+- [`src/lib/monitor/session-reader.ts`](src/lib/monitor/session-reader.ts)
+- [`src/lib/monitor/hooks-reader.ts`](src/lib/monitor/hooks-reader.ts)
+- [`src/lib/monitor/process-utils.ts`](src/lib/monitor/process-utils.ts)
+- [`src/lib/monitor/process-tree.ts`](src/lib/monitor/process-tree.ts)
 
 ## Data Model
 
@@ -96,6 +110,7 @@ It is generated from the full interaction history.
 
 It includes:
 - averages
+- trajectory
 - top tools
 - top categories
 - top observed apps
@@ -127,8 +142,10 @@ Flow:
 6. compute today’s amount/quality/leverage
 7. build cumulative memory profile from all entries plus passive activity
 8. persist `profile.json`
-9. generate benchmark deltas and suggestion queue
-10. return one combined JSON snapshot
+9. build the fast fallback coach view immediately
+10. try to merge cached Claude-generated coaching if an exact cached analysis exists
+11. if not cached, warm Claude coaching in the background without blocking the response
+12. return one combined JSON snapshot immediately
 
 ### `/api/prompt-score`
 
@@ -159,23 +176,29 @@ Flow:
 This route is now optional.
 It exists for prompt-level coaching or extra manual context, not baseline time tracking.
 
-## Prompt Scoring Philosophy
+## Coaching Philosophy
 
-The app does not attempt deep semantic truth.
+There are two layers:
 
-It uses transparent heuristics.
+1. substrate and fallback
+2. richer coach output
 
-Signals rewarded:
-- context
-- concrete deliverables
-- constraints
-- critique language
-- evaluation language
-- higher-value work patterns such as eval design or decision analysis
+The substrate layer is deliberately transparent:
+- session classification
+- prompt scoring
+- memory synthesis
+- baseline scoring
+- fallback coach behavior
 
-That is deliberate.
+The richer coach layer is generated through the local `Claude Code` CLI when available.
+That layer is:
+- cached
+- asynchronous
+- optional for first paint
+- dependent on an existing `Claude Code` login
+- never dependent on an API key stored in this repo
 
-The goal is a coach the user can inspect and trust, not a black-box judge.
+This gives fast UI plus room for world-class coaching depth.
 
 ## Memory Profile Philosophy
 
@@ -213,7 +236,9 @@ Current constraints:
 - active context is lightweight
 - no full-screen OCR
 - no hidden scraping
-- no external services
+- no API-key path in the repo
+- no secret persistence in repo state
+- deeper coaching depends on `Claude Code` login, not a bundled secret
 
 Those are product choices, not accidents.
 
@@ -237,7 +262,7 @@ They reduce policy risk and keep the app deployable on real work machines.
 
 ### Better Coaching
 
-- more tailored rewrites by work mode
+- richer cached LLM-generated coaching by work mode
 - stronger decision memo templates
 - weekly and monthly review views
 - more aggressive “you should use AI here” triggers
@@ -248,6 +273,6 @@ If you are an LLM editing this repo:
 
 - keep the system local-first
 - do not add hidden data collection
-- prefer explicit deterministic code over vague magic
+- keep heuristics as substrate and fallback, not the only visible coach
 - optimize for AI PM risk coaching, not generic productivity
 - use the memory profile to improve advice quality, not just to collect more stats
