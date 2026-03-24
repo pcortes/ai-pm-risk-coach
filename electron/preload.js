@@ -1,5 +1,3 @@
-const { contextBridge, ipcRenderer } = require("electron");
+const { contextBridge } = require("electron");
 
-contextBridge.exposeInMainWorld("electronAPI", {
-  pickFolder: () => ipcRenderer.invoke("dialog:pickFolder"),
-});
+contextBridge.exposeInMainWorld("electronAPI", {});

@@ -10,6 +10,7 @@ import {
   OpportunityGap,
 } from "./types";
 import { assessPrompt, detectCategories, extractFocusTerms, scoreDay } from "./scoring";
+import { localDateKey } from "./time";
 
 export function buildMemoryProfile(entries: CoachUsageEntry[], activitySamples: ActivitySample[]): MemoryProfile {
   const usageBuckets = bucketByDay(entries.map((entry) => ({ timestamp: entry.timestamp, value: entry })));
@@ -213,7 +214,7 @@ function buildBehavioralPatterns(input: {
   if (input.coachingPriorities[0]) {
     patterns.push({
       title: "Prompt quality has a persistent limiting factor",
-      evidence: input.coachingPriorities[0],
+      evidence: trimSentence(input.coachingPriorities[0]),
     });
   }
 
@@ -256,7 +257,12 @@ function buildCoachingHypotheses(input: {
     });
   }
 
-  if (input.strongestCategory && input.weakestCategory && input.strongestCategory.name !== input.weakestCategory.name) {
+  if (
+    input.strongestCategory &&
+    input.weakestCategory &&
+    input.strongestCategory.name !== input.weakestCategory.name &&
+    input.strongestCategory.averageScore - input.weakestCategory.averageScore >= 5
+  ) {
     hypotheses.push({
       title: `Transfer quality from ${input.strongestCategory.name} into ${input.weakestCategory.name}`,
       rationale: `${input.strongestCategory.name} averages ${input.strongestCategory.averageScore}, while ${input.weakestCategory.name} averages ${input.weakestCategory.averageScore}.`,
@@ -336,7 +342,7 @@ function averageScoresByCategory(entries: CoachUsageEntry[], assessments: Return
 function bucketByDay<T>(items: { timestamp: string; value: T }[]) {
   const byDay = new Map<string, T[]>();
   for (const item of items) {
-    const day = item.timestamp.slice(0, 10);
+    const day = localDateKey(item.timestamp);
     byDay.set(day, [...(byDay.get(day) ?? []), item.value]);
   }
 
@@ -348,10 +354,10 @@ function bucketByDay<T>(items: { timestamp: string; value: T }[]) {
 function countTrackedDays(entries: CoachUsageEntry[], activitySamples: ActivitySample[]) {
   const days = new Set<string>();
   for (const entry of entries) {
-    days.add(entry.timestamp.slice(0, 10));
+    days.add(localDateKey(entry.timestamp));
   }
   for (const sample of activitySamples) {
-    days.add(sample.timestamp.slice(0, 10));
+    days.add(localDateKey(sample.timestamp));
   }
   return days.size;
 }
@@ -421,7 +427,7 @@ function buildSummary(input: {
     .map((item) => `${item.name} (${item.percentage}%)`)
     .join(", ") || "general work";
   const topics = input.recurringTopics.slice(0, 3).join(", ") || "current work";
-  const priority = input.coachingPriorities[0] ?? "raise prompt quality with stronger context and deliverables";
+  const priority = trimSentence(input.coachingPriorities[0] ?? "raise prompt quality with stronger context and deliverables");
   const gap = input.opportunityGaps[0]
     ? `The biggest unrealized opportunity is in ${input.opportunityGaps[0].workMode}.`
     : "There is not enough history yet to identify a dominant missed-opportunity context.";
@@ -457,6 +463,10 @@ function inferConfidence(entryCount: number, activityCount: number): "low" | "me
 function formatHour(hour: number) {
   const normalized = ((hour % 24) + 24) % 24;
   return `${String(normalized).padStart(2, "0")}:00`;
+}
+
+function trimSentence(value: string) {
+  return value.trim().replace(/[.]+$/, "");
 }
 
 function round1(value: number) {

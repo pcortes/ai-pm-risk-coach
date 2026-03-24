@@ -4,6 +4,7 @@ import { buildSuggestionQueue } from "./templates";
 import { getActiveContext } from "./active-context";
 import { readActivitySamples, readUsageEntries, recordActivitySample, writeMemoryProfile } from "./storage";
 import { ActivitySample, CoachSnapshot, CoachUsageEntry, DailySummary } from "./types";
+import { localDateKey } from "./time";
 
 export async function buildCoachSnapshot(now = new Date()): Promise<CoachSnapshot> {
   const activeContext = await getActiveContext();
@@ -16,8 +17,8 @@ export async function buildCoachSnapshot(now = new Date()): Promise<CoachSnapsho
 
   const entries = await readUsageEntries();
   const activitySamples = await readActivitySamples();
-  const todayKey = now.toISOString().slice(0, 10);
-  const todayEntries = entries.filter((entry) => entry.timestamp.slice(0, 10) === todayKey);
+  const todayKey = localDateKey(now);
+  const todayEntries = entries.filter((entry) => localDateKey(entry.timestamp) === todayKey);
   const { scoreCard, assessments } = scoreDay(todayEntries);
   const memoryProfile = buildMemoryProfile(entries, activitySamples);
   await writeMemoryProfile(memoryProfile);
